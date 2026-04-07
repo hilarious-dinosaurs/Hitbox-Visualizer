@@ -1,36 +1,47 @@
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 
--- Globaler Status
-local _G = getgenv and getgenv() or _G
-_G.HitboxEnabled = false
+-- Globaler Status (getgenv für bessere Executor-Kompatibilität)
+if not getgenv then getgenv = function() return _G end end
+getgenv().HitboxEnabled = false
+
+-- Konfiguration
+local Config = {
+    HitboxColor = Color3.fromRGB(255, 0, 0), -- Rot (wie auf deinem Bild)
+    HitboxTransparency = 0.65,             -- Hohe Transparenz (0.0=solid, 1.0=unsichtbar)
+    NameTagTransparency = 0.0,             -- Name nicht transparent
+    CheckInterval = 0.1                    -- Wie oft (in Sek.) nach neuen/respawnten Spielern gesucht wird (sehr schnell)
+}
 
 -- Funktion zum Erstellen/Entfernen der Visuellen Effekte
 local function refreshVisuals()
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local root = player.Character.HumanoidRootPart
+        if player ~= Players.LocalPlayer and player.Character then
+            local character = player.Character
             
-            if _G.HitboxEnabled then
-                -- 1. DIE BOX (Hitbox)
-                if not root:FindFirstChild("DevBox") then
-                    local box = Instance.new("BoxHandleAdornment")
-                    box.Name = "DevBox"
-                    box.Size = Vector3.new(4, 6, 2)
-                    box.AlwaysOnTop = true
-                    box.ZIndex = 10
-                    box.Color3 = Color3.fromRGB(0, 255, 0) -- Grün
-                    box.Transparency = 0.5
-                    box.Adornee = root
-                    box.Parent = root
+            -- Suche ein gültiges Teil, um das NameTag anzuheften (HumanoidRootPart oder Head)
+            local root = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Head")
+
+            if _G.HitboxEnabled and root then
+                -- 1. DIE HITBOX (Highlight) - FÜR GENAUES OVERLAY
+                if not character:FindFirstChild("DevHighlight") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "DevHighlight"
+                    hl.Adornee = character
+                    hl.FillColor = Config.HitboxColor
+                    hl.FillTransparency = Config.HitboxTransparency -- Transparente Füllung
+                    hl.OutlineColor = Color3.fromRGB(0, 0, 0) -- Schwarze Umrandung
+                    hl.OutlineTransparency = 0.9              -- Fast unsichtbare Umrandung
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop -- Durch Wände sehen
+                    hl.Parent = character
                 end
 
-                -- 2. DER NAME (BillboardGui) - JETZT GRÖSSER
+                -- 2. DER NAME (BillboardGui) - BLEIBT GRÖSSER
                 if not root:FindFirstChild("DevNameTag") then
                     local bbg = Instance.new("BillboardGui")
                     bbg.Name = "DevNameTag"
-                    bbg.Size = UDim2.new(0, 300, 0, 70) -- Größeres Feld für den Text
-                    bbg.StudsOffset = Vector3.new(0, 5, 0) -- Etwas höher über dem Kopf
+                    bbg.Size = UDim2.new(0, 300, 0, 70)
+                    bbg.StudsOffset = Vector3.new(0, 5, 0) -- Etwas höher
                     bbg.AlwaysOnTop = true
                     bbg.Adornee = root
                     bbg.Parent = root
@@ -43,23 +54,24 @@ local function refreshVisuals()
                     label.TextStrokeTransparency = 0 -- Schwarze Umrandung
                     label.TextStrokeColor3 = Color3.new(0, 0, 0)
                     label.Font = Enum.Font.SourceSansBold
-                    label.TextSize = 24 -- SCHRIFTGRÖSSE ERHÖHT (vorher 14)
-                    label.TextScaled = false -- Damit die Größe fest bleibt
+                    label.TextSize = 24
+                    label.TextScaled = false
                     label.Parent = bbg
                 end
             else
-                -- Alles löschen, wenn OFF
-                if root:FindFirstChild("DevBox") then root.DevBox:Destroy() end
-                if root:FindFirstChild("DevNameTag") then root.DevNameTag:Destroy() end
+                -- Alles löschen, wenn OFF oder kein gültiger Charakter
+                if character:FindFirstChild("DevHighlight") then character.DevHighlight:Destroy() end
+                if root and root:FindFirstChild("DevNameTag") then root.DevNameTag:Destroy() end
             end
         end
     end
 end
 
--- GUI Erstellung (Button oben links)
+-- GUI Erstellung (Button oben links, bleibt gleich)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "DevControlGui"
-if syn and syn.protect_gui then syn.protect_gui(screenGui) end 
+-- Schutz vor Erkennung (für manche Executoren)
+pcall(function() if syn and syn.protect_gui then syn.protect_gui(screenGui) end end)
 screenGui.Parent = CoreGui
 
 local toggleButton = Instance.new("TextButton")
@@ -76,13 +88,15 @@ toggleButton.Parent = screenGui
 toggleButton.MouseButton1Click:Connect(function()
     _G.HitboxEnabled = not _G.HitboxEnabled
     toggleButton.Text = _G.HitboxEnabled and "Hitbox: ON" or "Hitbox: OFF"
-    toggleButton.BackgroundColor3 = _G.HitboxEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+    toggleButton.BackgroundColor3 = _G.HitboxEnabled and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(40, 40, 40)
+    
+    -- Sofortiges Update beim Klicken
     refreshVisuals()
 end)
 
--- Loop für Updates (neue Spieler/Respawn) alle 1 Sekunde
+-- Loop für Updates (neue Spieler/Respawn) - Sehr schnell (0.1 Sek)
 task.spawn(function()
-    while task.wait(1) do
+    while task.wait(Config.CheckInterval) do
         refreshVisuals()
     end
 end)
