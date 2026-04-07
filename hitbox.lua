@@ -1,30 +1,32 @@
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 
+-- Globaler Status
 if not getgenv then getgenv = function() return _G end end
 getgenv().HitboxEnabled = false
 
+-- Funktion zum Erstellen/Entfernen der Visuellen Effekte
 local function refreshVisuals()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= Players.LocalPlayer and player.Character then
             local char = player.Character
             local root = char:FindFirstChild("HumanoidRootPart")
-
+            
             if _G.HitboxEnabled and root then
-                -- TRICK FÜR UNSICHTBARE: Wir erstellen eine Box, falls der Spieler unsichtbar ist
-                if not root:FindFirstChild("VisiblePart") then
-                    local p = Instance.new("BoxHandleAdornment")
-                    p.Name = "VisiblePart"
-                    p.Size = Vector3.new(4, 6, 2) -- Größe eines normalen Charakters
-                    p.AlwaysOnTop = true
-                    p.ZIndex = 5
-                    p.Adornee = root
-                    p.Color3 = Color3.fromRGB(255, 0, 0)
-                    p.Transparency = 0.5 -- Hier stellen wir die Transparenz ein!
-                    p.Parent = root
+                -- 1. DIE GRÜNE BOX (Hitbox)
+                if not root:FindFirstChild("DevBox") then
+                    local box = Instance.new("BoxHandleAdornment")
+                    box.Name = "DevBox"
+                    box.Size = Vector3.new(4, 6, 2) -- Standard Hitbox Größe
+                    box.AlwaysOnTop = true
+                    box.ZIndex = 10
+                    box.Color3 = Color3.fromRGB(0, 255, 0) -- Klassisches Grün
+                    box.Transparency = 0.5
+                    box.Adornee = root
+                    box.Parent = root
                 end
 
-                -- NAME TAG (Bleibt gleich)
+                -- 2. DER GROSSE NAME
                 if not root:FindFirstChild("DevNameTag") then
                     local bbg = Instance.new("BillboardGui")
                     bbg.Name = "DevNameTag"
@@ -41,21 +43,22 @@ local function refreshVisuals()
                     label.TextColor3 = Color3.new(1, 1, 1)
                     label.TextStrokeTransparency = 0
                     label.Font = Enum.Font.SourceSansBold
-                    label.TextSize = 24
+                    label.TextSize = 24 -- Schön groß, wie gewünscht
                     label.Parent = bbg
                 end
             else
-                -- Löschen beim Ausschalten
-                if root and root:FindFirstChild("VisiblePart") then root.VisiblePart:Destroy() end
+                -- Alles löschen, wenn OFF
+                if root and root:FindFirstChild("DevBox") then root.DevBox:Destroy() end
                 if root and root:FindFirstChild("DevNameTag") then root.DevNameTag:Destroy() end
             end
         end
     end
 end
 
--- GUI (Button)
+-- GUI Erstellung (Button)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "DevControlGui"
+pcall(function() if syn and syn.protect_gui then syn.protect_gui(screenGui) end end)
 screenGui.Parent = CoreGui
 
 local toggleButton = Instance.new("TextButton")
@@ -68,13 +71,15 @@ toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.TextSize = 18
 toggleButton.Parent = screenGui
 
+-- Button Logik
 toggleButton.MouseButton1Click:Connect(function()
     _G.HitboxEnabled = not _G.HitboxEnabled
     toggleButton.Text = _G.HitboxEnabled and "Hitbox: ON" or "Hitbox: OFF"
-    toggleButton.BackgroundColor3 = _G.HitboxEnabled and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(40, 40, 40)
+    toggleButton.BackgroundColor3 = _G.HitboxEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
     refreshVisuals()
 end)
 
+-- Loop für Updates
 task.spawn(function()
     while task.wait(0.5) do
         refreshVisuals()
