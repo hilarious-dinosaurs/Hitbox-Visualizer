@@ -25,12 +25,12 @@ local function refreshVisuals()
                     box.Parent = root
                 end
 
-                -- 2. DER NAME (BillboardGui)
+                -- 2. DER NAME (BillboardGui) - JETZT GRÖSSER
                 if not root:FindFirstChild("DevNameTag") then
                     local bbg = Instance.new("BillboardGui")
                     bbg.Name = "DevNameTag"
-                    bbg.Size = UDim2.new(0, 200, 0, 50)
-                    bbg.StudsOffset = Vector3.new(0, 4, 0) -- Schwebt über dem Kopf
+                    bbg.Size = UDim2.new(0, 300, 0, 70) -- Größeres Feld für den Text
+                    bbg.StudsOffset = Vector3.new(0, 5, 0) -- Etwas höher über dem Kopf
                     bbg.AlwaysOnTop = true
                     bbg.Adornee = root
                     bbg.Parent = root
@@ -40,9 +40,11 @@ local function refreshVisuals()
                     label.BackgroundTransparency = 1
                     label.Text = player.Name
                     label.TextColor3 = Color3.new(1, 1, 1) -- Weiß
-                    label.TextStrokeTransparency = 0 -- Schwarze Umrandung für bessere Lesbarkeit
+                    label.TextStrokeTransparency = 0 -- Schwarze Umrandung
+                    label.TextStrokeColor3 = Color3.new(0, 0, 0)
                     label.Font = Enum.Font.SourceSansBold
-                    label.TextSize = 14
+                    label.TextSize = 24 -- SCHRIFTGRÖSSE ERHÖHT (vorher 14)
+                    label.TextScaled = false -- Damit die Größe fest bleibt
                     label.Parent = bbg
                 end
             else
@@ -78,7 +80,7 @@ toggleButton.MouseButton1Click:Connect(function()
     refreshVisuals()
 end)
 
--- Loop für Updates (neue Spieler/Respawn)
+-- Loop für Updates (neue Spieler/Respawn) alle 1 Sekunde
 task.spawn(function()
     while task.wait(1) do
         refreshVisuals()
